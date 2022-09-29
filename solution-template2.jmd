@@ -53,22 +53,38 @@ Bo12 = ((v1 * Bo1) + (v2 * Bo2))/(v1 + v2)
 No12 = ((v1 * No1) + (v2 * No2))/(v1 + v2)
 
 
-xDist = 0:1:x
-for i in 1:length(xDist)
+xDist = 1:x
+Cl = zeros(length(xDist))
+for i in 1:15
    xTrav = xDist[i]
-   local a1 = exp(-ka * xTrav/U)
-   local a2 = ((kc - ka)/kc)* ((exp(-kc * xTrav/U))-(exp(-ka * xTrav/U))) 
-   local a3 = ((kn - ka)/kn)* ((exp(-kn * xTrav/U))-(exp(-ka * xTrav/U))) 
-  Cl[i] = Cs*(1-a1)+(Co12*a1)-(Bo12*a2)-(No12*a3)
+   a1 = exp(-ka * xTrav/U)
+   a2 = ((kc - ka)/kc)* ((exp(-kc * xTrav/U))-(exp(-ka * xTrav/U))) 
+   a3 = ((kn - ka)/kn)* ((exp(-kn * xTrav/U))-(exp(-ka * xTrav/U))) 
+   Cl[i] = Cs*(1-a1)+(Co12*a1)-(Bo12*a2)-(No12*a3)
 end
+
+Co23= Cl[15]
+Bo23= Bo12 * exp(-kc * 15/U)
+No23= No12 * exp(-kn * 15/U)
+
+Co3 = (Co23 * (v1 + v2) + (Co3 * v3))/(v1+v2+v3)
+Bo3 = (Bo23 * (v1 + v2) + (Bo3 * v3))/(v1+v2+v3)
+No3 = (No23 * (v1 + v2) + (No3 * v3))/(v1+v2+v3)
+
+for i in 16:50
+   xTrav = xDist[i]
+   a12 = exp(-ka * xTrav/U)
+   a22 = ((kc - ka)/kc)* ((exp(-kc * xTrav/U))-(exp(-ka * xTrav/U))) 
+   a32 = ((kn - ka)/kn)* ((exp(-kn * xTrav/U))-(exp(-ka * xTrav/U))) 
+   Cl[i] = Cs*(1-a12)+(Co3*a12)-(Bo3*a22)-(No3*a32)
+end
+
     return Cl[1:50]
 end
 a = downstream_concentration(50)
-
-using Plots 
-plot(a,0,50)
-
-```
+println(a)
+#using Plots 
+#scatter(a)
 ## Problem 1.2
 
 ## Problem 1.3
