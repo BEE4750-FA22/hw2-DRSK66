@@ -1,6 +1,6 @@
 ---
 title: "BEE 4750/5750 Homework 2"
-author: "Your name here (your netID here)"
+author: Andrew Scacchi (ads339)
 date: `j import Dates; Dates.Date(Dates.now())`
 weave_options:
     term: true
@@ -19,7 +19,56 @@ Pkg.instantiate()
 # Problem 1
 
 ## Problem 1.1
+```julia
+function downstream_concentration(x)
+# Aeration and decay coefficients
+ka = 0.55
+kc = 0.35
+kn = 0.25
+# Velocity (km/day)
+U = 6
+# Sat DO (mg/L)
+Cs = 10 
+# DO from inflow, Source 1, and Source 2 (mg/L)
+Co1 = 7.5
+Co2 = 5
+Co3 = 5
+# Volumes (m^3/ d)
+v1 = 100000
+v2 = 10000
+v3 = 15000
+# CBOD initial (mg/L)
+Bo1 = 5
+Bo2 = 50
+Bo3 = 45
+# NBOD Initial (mg/L)
+No1 = 5
+No2 = 35
+No3 = 35
 
+## Compute Co, Bo, and No where source 1 and inflow mix
+# Mixed Co
+Co12 = ((v1*Co1) + (v2*Co2))/(v1+v2)
+Bo12 = ((v1 * Bo1) + (v2 * Bo2))/(v1 + v2)
+No12 = ((v1 * No1) + (v2 * No2))/(v1 + v2)
+
+
+xDist = 0:1:x
+for i in 1:length(xDist)
+   xTrav = xDist[i]
+   local a1 = exp(-ka * xTrav/U)
+   local a2 = ((kc - ka)/kc)* ((exp(-kc * xTrav/U))-(exp(-ka * xTrav/U))) 
+   local a3 = ((kn - ka)/kn)* ((exp(-kn * xTrav/U))-(exp(-ka * xTrav/U))) 
+  Cl[i] = Cs*(1-a1)+(Co12*a1)-(Bo12*a2)-(No12*a3)
+end
+    return Cl[1:50]
+end
+a = downstream_concentration(50)
+
+using Plots 
+plot(a,0,50)
+
+```
 ## Problem 1.2
 
 ## Problem 1.3
