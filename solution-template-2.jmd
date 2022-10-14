@@ -70,7 +70,7 @@ a = downstream_concentration(50)
 using Plots 
 scatter(a)
 
-```
+``` 
 
 ## Problem 1.2
 
