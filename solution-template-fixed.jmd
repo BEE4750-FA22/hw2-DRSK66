@@ -1,6 +1,6 @@
 ---
 title: "BEE 4750/5750 Homework 2"
-author: Andrew Scacchi (ads339)
+author: "Andrew Scacchi (ads339)"
 date: `j import Dates; Dates.Date(Dates.now())`
 weave_options:
     term: true
@@ -20,7 +20,8 @@ Pkg.instantiate()
 
 ## Problem 1.1
 ```julia
-function downstream_concentration(x)
+
+function downstream_concentration(x,y,z,cbod1, nbod1)
 # Aeration and decay coefficients
 ka = 0.55
 kc = 0.35
@@ -34,73 +35,223 @@ Co1 = 7.5
 Co2 = 5
 Co3 = 5
 # Volumes (m^3/ d)
-v1 = 100000
-v2 = 10000
-v3 = 15000
+global v1 = 100000*1000
+global v2 = 10000*1000
+global v3 = 15000*1000
 # CBOD initial (mg/L)
-Bo1 = 5
-Bo2 = 50
-Bo3 = 45
+Bo1 = cbod1
+Bo2 = 50 * y
+Bo3 = 45 * z
 # NBOD Initial (mg/L)
-No1 = 5
-No2 = 35
-No3 = 35
+No1 = nbod1
+No2 = 35 * y
+No3 = 35 * z
 
 ## Compute Co, Bo, and No where source 1 and inflow mix
 # Mixed Co
-Co12 = ((v1*Co1) + (v2*Co2))/(v1+v2)
+Co12 = ((v1*Co1) + (v2*Co2))/(v1+v2) 
 Bo12 = ((v1 * Bo1) + (v2 * Bo2))/(v1 + v2)
 No12 = ((v1 * No1) + (v2 * No2))/(v1 + v2)
 
 
-xDist = 0:1:x
-for i in 1:length(xDist)
-   xTrav = xDist[i]
-   local a1 = exp(-ka * xTrav/U)
-   local a2 = ((kc - ka)/kc)* ((exp(-kc * xTrav/U))-(exp(-ka * xTrav/U))) 
-   local a3 = ((kn - ka)/kn)* ((exp(-kn * xTrav/U))-(exp(-ka * xTrav/U))) 
-  Cl[i] = Cs*(1-a1)+(Co12*a1)-(Bo12*a2)-(No12*a3)
-end
-    return Cl[1:50]
-end
-a = downstream_concentration(50)
+xDist = 0:x
+Cl = zeros(length(xDist))
 
-using Plots 
-plot(a,0,50)
+#Iterate between point of mixing to right before second waste stream enters at x=15km
+for i in 1:x
+   a1 = exp(-(ka*xDist[i])/U)
+   a2 = (kc/(ka - kc))* (exp(-(kc*xDist[i])/U)-exp(-(ka*xDist[i])/U)) 
+   a3 = (kn/(ka - kn))* (exp(-(kn*xDist[i])/U)-exp(-(ka*xDist[i])/U)) 
+   Cl[i] = (Cs*(1-a1)) + (Co12*a1) - (Bo12*a2) - (No12*a3)
+end
+
+#redefine variables to values just before second waste stream 
+Co23= Cl[16]
+Bo23= Bo12 * exp(-kc * 15/U)
+No23= No12 * exp(-kn * 15/U)
+
+#redefine concentrations to be post mixing with stream 2
+C32 = (Co23 * (v1 + v2) + (Co3 * v3))/(v1+v2+v3) #4.8964
+B32 = (Bo23 * (v1 + v2) + (Bo3 * v3))/(v1+v2+v3) #8.734892
+N32 = (No23 * (v1 + v2) + (No3 * v3))/(v1+v2+v3) #7.83968
+
+xDist2 = 0:(x-15)
+Cl2 = zeros(length(xDist))
+
+#Iterates loop after second stream enters at x = 15km through x limit
+k = x-14
+for i in 1:k
+   a12 = exp(-(ka*xDist2[i])/U)
+   a22 = (kc/(ka - kc))* (exp(-(kc*xDist2[i])/U)-exp(-(ka*xDist2[i])/U))
+   a32 = (kn/(ka - kn))* (exp(-(kn*xDist2[i])/U)-exp(-(ka*xDist2[i])/U)) 
+   Cl2[i+15] = (Cs*(1-a12)) + (C32*a12) - (B32*a22) - (N32*a32)
+end
+
+Cl[16:end] = Cl2[16:end]
+
+    return Cl #values of array from start to end
+end
+
+Cl = downstream_concentration(50,1,1,5,5)
+println(Cl)
+#using Plots
+#r= [0:50]
+#plot(r,Cl, title= "Downstream DO Concentration", label = "mg/L Dissolved Oxygen", xlabel= "distance from Stream1 (km)", ylabel= "DO Concentration (mg/L)")
 
 ```
 ## Problem 1.2
+```julia
+i = 17
+while Cl[i] < 6
+  global i = i + 1
+end
+
+Dist1 = i-2
+Dist2 = Dist1 -15
+println("Disolved Oxygen levels will recover to 6mg/L ", Dist1,"km downstrean from Discharge stream 1")
+println("Disolved Oxygen levels will recover to 6mg/L ", Dist2, "km downstrean from Discharge stream 1")
+```
 
 ## Problem 1.3
+```julia
+
+removal = 0
+Cmin = minimum(downstream_concentration(50,1,1,5,5))
+while Cmin <= 4.0
+     global removal = removal + .01
+     local foo = 1-removal
+     local Cll = downstream_concentration(50,1,foo,5,5)
+     global Cmin = minimum(Cll)
+end
+    removal = removal* 100
+    println("The minimum % removal of organic waste from stream 2 to ensure compliance is ",removal, " %")
+
+```
 
 ## Problem 1.4
+```julia
+removal = 0
+Cmin = minimum(downstream_concentration(50,1,1,5,5))
+while Cmin <= 4
+     global removal = removal + .01
+     local foo = 1-removal
+     local Cll = downstream_concentration(50,foo,foo,5,5)
+     global Cmin = minimum(Cll)
+end
+removal1= removal* 100
+println("The minimum % equal removal of organic waste from both streams to ensure compliance is ",removal1, " %")
 
+```
 ## Problem 1.5
 
-## Problem 1.6
+Before making any decisions on traetment, cost of abatement, marginal costs, and regulatory restricitons all have to be 
+taken into consideration. While less remediation has to be done to each waste stream when they are equally treated, 
+the marginal costs are unlikely to be the same. As such, remediation should be done so that the marginal cost of removing 
+one more unit of waste is the same for each stream, while still ensuring the DO is > 4mg/L. What that combination entails 
+is unable to be determined at this time without additional cost and regulatory information.
 
+## Problem 1.6
+For the sake of this problem, assume it is easier to remediate both equally
+```julia
+using Distributions
+
+function compute_fail_prob()
+local n = 100000
+global CBOD = zeros(n)
+global NBOD = zeros(n)
+global min_DO = zeros(n)
+global failures = 0
+
+for i in 1:n
+  CBOD[i] = rand(Uniform(4,7))
+  NBOD[i] = rand(Uniform(3,8))
+end
+
+for i in 1:n
+  min_DO[i] = minimum(downstream_concentration(50,.93,.93,CBOD[i],NBOD[i]))
+end
+
+for i in 1:n
+  if min_DO[i] < 4
+  failures = failures + 1
+  end
+end
+
+success= (n - failures)/n
+return success
+end
+success = 100* compute_fail_prob()
+println(success, " % Probability DO stays within standards.")
+
+```
 ## Problem 1.7
 
-#```julia; echo=false
+```julia; echo=false
 # This block will not show up in compiled output.
 
-# using Distributions
-# using PDMats
+using Distributions
+using PDMats
 
 # This function samples n correlated variates distributed over 
 # Uniform([a[1], a[2]]) and Uniform([b[1], b[2]]) with correlation coefficient
 # corr_coef.
-# function sample_correlated_uniform(n, a, b, corr_coef=0.7)
+function sample_correlated_uniform(n, a, b, corr_coef=0.7)
   mvnorm = MvNormal([0, 0], PDMat([1 corr_coef; corr_coef 1])) # set up a multivariate normal with each marginal variance of 1 and the right correlation
   norm_samples = rand(mvnorm, n)' # sample from the multivariate normal, the marginal distributions are a standard normal
   unif_samples = cdf.(Normal(0, 1), norm_samples) # convert samples to a uniform distribution using the pdf of a standard Normal
   samples = (unif_samples .* [a[2] - a[1] b[2] - b[1]]) .+ [a[1] b[1]]
   return samples
-# end
-# ```
+end
+```
 
+```julia
+
+global m = 100000
+global CBOD = zeros(m)
+global NBOD = zeros(m)
+global min_DO = zeros(m)
+global failures2 = 0
+
+
+scurv= sample_correlated_uniform(100000, [4,7], [3,8], 0.7)
+
+
+for i in 1:m
+  CBOD[i] = scurv[i,1]
+  NBOD[i] = scurv[i,2]
+end
+
+for i in 1:m
+  min_DO[i] = minimum(downstream_concentration(50,.93,.93,CBOD[i],NBOD[i]))
+end
+
+for i in 1:m
+  if min_DO[i] < 4
+  global failures2 = failures2 + 1
+  end
+end
+
+success= (m - failures2)/m
+return success
+
+success = 100* compute_fail_prob()
+println(success," % Probability DO stays within standards.")
+
+```
 ## Problem 1.8
 
-# ```
 
 # References
+Works Cited
+“How to create a random Uniform Distribution between (but excluding) 0 and 10?” Julia Discourse,
+ https://discourse.julialang.org/t/how-to-create-a-random-uniform-distribution-between-but-excluding-0-and-10/21908. Accessed 30 September 2022.
+
+
+“How to create a uniformly random matrix in Julia?” Stack Overflow, 22 
+August 2016, https://stackoverflow.com/questions/39083344/how-to-create-a-uniformly-random-matrix-in-julia. Accessed 30 September 2022.
+
+“Variate Definition & Meaning.” Dictionary.com,
+ https://www.dictionary.com/browse/variate. Accessed 30 September 2022.
+
+“Random Numbers · The Julia Language.” Julia Documentation, 
+https://docs.julialang.org/en/v1/stdlib/Random/. Accessed 30 September 2022.
