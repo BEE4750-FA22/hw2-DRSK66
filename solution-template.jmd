@@ -96,7 +96,7 @@ Cl = downstream_concentration(50,1,1,5,5)
 println(Cl)
 r= 0:50
 using Plots
-plot(Cl, r,title= "Downstream DO Concentration",label="mg/L Dissolved Oxygen",xlabel= "distance from Stream1 (km)",ylabel= "DO Concentration (mg/L)")
+plot(r,Cl,title= "Downstream DO Concentration",label="mg/L Dissolved Oxygen",xlabel= "distance from Stream1 (km)",ylabel= "DO Concentration (mg/L)")
 
 ```
 ## Problem 1.2
